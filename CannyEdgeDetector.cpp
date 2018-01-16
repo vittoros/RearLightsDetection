@@ -1,7 +1,8 @@
 #include "CannyEdgeDetector.h"
 
 // Input: CV_8UC1 -> convertTo CV_32FC1
-void CannyEdgeDetector(const cv::Mat &image) {
+// Output: CV_32FC1 binary 0-1
+cv::Mat CannyEdgeDetector(const cv::Mat &image) {
 	int rows = image.rows, cols = image.cols;
 	
 	//-----------------------------------------------------------
@@ -46,9 +47,9 @@ void CannyEdgeDetector(const cv::Mat &image) {
 	}
 
 	// Show image
-	G.convertTo(blurredImage, CV_8UC1);
-	cv::namedWindow("Sobel", CV_WINDOW_AUTOSIZE);
-	cv::imshow("Sobel", blurredImage);
+	//G.convertTo(blurredImage, CV_8UC1);
+	//cv::namedWindow("Sobel", CV_WINDOW_AUTOSIZE);
+	//cv::imshow("Sobel", blurredImage);
 	//-----------------------------------------------------------
 	// Apply non-maximum suppression
 	for (int i = 1; i < rows - 1; ++i)
@@ -75,13 +76,13 @@ void CannyEdgeDetector(const cv::Mat &image) {
 	}
 
 	// Show image
-	G.convertTo(blurredImage, CV_8UC1);
-	cv::namedWindow("Non-maximum", CV_WINDOW_AUTOSIZE);
-	cv::imshow("Non-maximum", blurredImage);
+	//G.convertTo(blurredImage, CV_8UC1);
+	//cv::namedWindow("Non-maximum", CV_WINDOW_AUTOSIZE);
+	//cv::imshow("Non-maximum", blurredImage);
 
 	//-----------------------------------------------------------
 	// Apply double threshold
-	float high = THRESHOLD_HIGH * maxValue, low = THRESHOLD_LOW * maxValue;
+	float high = static_cast<float>(THRESHOLD_HIGH * maxValue), low = static_cast<float>(THRESHOLD_LOW * maxValue);
 	cv::Mat doubleThresMap = cv::Mat::zeros(rows, cols, CV_8UC1);
 	std::vector<std::pair<int, int>> sureEdgesLocations;
 
@@ -127,6 +128,8 @@ void CannyEdgeDetector(const cv::Mat &image) {
 		G.at<float>(i, j) = 1;
 
 	// Show image
-	cv::namedWindow("Canny", CV_WINDOW_AUTOSIZE);
-	cv::imshow("Canny", G);
+	//cv::namedWindow("Canny", CV_WINDOW_AUTOSIZE);
+	//cv::imshow("Canny", G);
+
+	return G;
 }
