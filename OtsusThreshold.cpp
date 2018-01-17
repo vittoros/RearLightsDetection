@@ -9,6 +9,7 @@ void OtsusThreshold(cv::Mat &image) {
 		histogram[image.at<uchar>(i, j)] += 1;
 
 	// Find total meanValue
+	// histogram -> probability density function
 	double meanValue = 0.0;
 	for (int i = 0; i < NUMBEROFBINS; ++i) {
 		histogram[i] *= 1.0 / (rows*cols);

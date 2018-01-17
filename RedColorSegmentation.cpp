@@ -37,7 +37,7 @@ cv::Mat RedColorSegmentation(const cv::Mat &image) {
 	applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_JET);
 
 	cv::imshow("Out", falseColorsMap);
-	cv::waitKey(0);
-
+	//cv::waitKey(0);
+	
 	return redComponent;
 }
