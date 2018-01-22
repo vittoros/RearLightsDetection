@@ -5,6 +5,8 @@
 #include <opencv2/core/core.hpp>
 #include <vector>
 
-void HorizontalEdgeBoundaries(const cv::Mat &image);
+// image <- whole image
+// ROI <- ROI location found from previous steps
+void HorizontalEdgeBoundaries(const cv::Mat &image, cv::Rect &ROI);
 
 #endif // !HORIZONTALEDGEDETECTION_H

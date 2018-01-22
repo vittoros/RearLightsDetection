@@ -25,11 +25,21 @@ cv::Mat FastRadialSymmetryTransform(const cv::Mat &image, const int &mode, const
 
 
 	// Calculate gradient of image
-	cv::Mat Gx, Gy;
+	cv::Mat Gx = cv::Mat::zeros(image.size(), CV_64FC1), Gy = cv::Mat::zeros(image.size(), CV_64FC1);
 	cv::Mat GradientMagnitude(rows, cols, CV_64FC1);
 	double max = -1, temp;
-	Sobel(image, Gx, CV_64F, 1, 0);
-	Sobel(image, Gy, CV_64F, 0, 1);
+	//Sobel(image, Gx, CV_64F, 1, 0);
+	//Sobel(image, Gy, CV_64F, 0, 1);
+	for (int y = 1; y < image.rows - 1; ++y)
+	for (int x = 0; x < image.cols; ++x)
+		*((double*)Gx.data + y*Gx.cols + x) = (double)(*(image.data + (y + 1)*image.cols + x) - *(image.data + (y - 1)*image.cols + x)) / 2;
+		
+	
+	for (int y = 0; y < image.rows; ++y)
+	for (int x = 1; x < image.cols - 1; ++x)
+		*((double*)Gy.data + y*Gy.cols + x) = (double)(*(image.data + y*image.cols + x + 1) - *(image.data + y*image.cols + x - 1)) / 2;
+		
+	
 	for (int i = 0; i < rows; ++i)
 	for (int j = 0; j < cols; ++j) {
 		temp = sqrt(Gx.at<double>(i, j)*Gx.at<double>(i, j) + Gy.at<double>(i, j) * Gy.at<double>(i, j));
@@ -50,8 +60,8 @@ cv::Mat FastRadialSymmetryTransform(const cv::Mat &image, const int &mode, const
 		for (int j = 0; j < cols; ++j) {
 			temp = GradientMagnitude.at<double>(i,j);
 			if (temp > gradientThreshold * max) {
-				gradientRadiusX = static_cast<int>(round((Gx.at<double>(i, j) * radius) / temp));
-				gradientRadiusY = static_cast<int>(round((Gy.at<double>(i, j) * radius) / temp));
+				gradientRadiusX = static_cast<int>(round(Gx.at<double>(i, j) / temp)) * radius;
+				gradientRadiusY = static_cast<int>(round(Gy.at<double>(i, j) / temp)) * radius;
 
 				if (BRIGHT) {
 					O.at<double>(i + gradientRadiusX + offset, j + gradientRadiusY + offset) += 1;
@@ -78,7 +88,7 @@ cv::Mat FastRadialSymmetryTransform(const cv::Mat &image, const int &mode, const
 
 		// Apply Gaussian with window size of idx x idy and std = 0.25*radius
 		// gaussian kernel must be odd x odd
-		int idx = radius, idy = radius;
+		int idx = static_cast<int>(1.5*radius), idy = static_cast<int>(1.5*radius);
 		if (idx % 2 == 0) {
 			++idx;
 			++idy;

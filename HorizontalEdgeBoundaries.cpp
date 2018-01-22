@@ -1,8 +1,12 @@
 #include "HorizontalEdgeBoundaries.h"
 
-void HorizontalEdgeBoundaries(const cv::Mat &image) {
+// image <- whole image
+// ROI <- ROI location found from previous steps
+void HorizontalEdgeBoundaries(const cv::Mat &image, cv::Rect &ROI) {
 	// Detect edges in grayscale image of search region
-	cv::Mat CannyEdgeMap = CannyEdgeDetector(image);
+	cv::Mat myROI(image, ROI);
+	cvtColor(myROI, myROI, CV_BGR2GRAY);
+	cv::Mat CannyEdgeMap = CannyEdgeDetector(myROI);
 
 	// Calculate horizontal projection of edge map (+find maxValue)
 	int rows = CannyEdgeMap.rows, cols = CannyEdgeMap.cols, maxValue = 0;
@@ -26,9 +30,9 @@ void HorizontalEdgeBoundaries(const cv::Mat &image) {
 			last = i;
 	}
 
-	// Crop candidate vehicle to complete Hypothesis Generation step
-	cv::Rect myROI(0, first, cols, last-first);
-	cv::Mat candidateVehicle = image(myROI);
-
-	last = 0;	// DELETEMEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+	// Update ROI with up and lower bounds to complete Hypothesis Generation step
+	//ROI = cv::Rect(0, first, cols, last-first);
+	ROI.y += first;
+	ROI.width = cols;
+	ROI.height = last - first;
 }

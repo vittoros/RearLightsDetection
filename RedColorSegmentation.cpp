@@ -23,7 +23,7 @@ cv::Mat RedColorSegmentation(const cv::Mat &image) {
 
 	// -----------------------------------------------------------------------
 	// print image
-	double min, max;
+	/*double min, max;
 	cv::minMaxIdx(redComponent, &min, &max);
 	cv::Mat adjMap;
 	// expand your range to 0..255. Similar to histEq();
@@ -37,7 +37,7 @@ cv::Mat RedColorSegmentation(const cv::Mat &image) {
 	applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_JET);
 
 	cv::imshow("Out", falseColorsMap);
-	//cv::waitKey(0);
-	
+	cv::waitKey(0);
+	*/
 	return redComponent;
 }

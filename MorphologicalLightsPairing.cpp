@@ -1,12 +1,13 @@
 #include "MorphologicalLightsPairing.h"
 
-std::vector<cv::Mat> processImage(cv::Mat &image, cv::Mat &cimage) {
+std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat &image, cv::Mat &cimage) {
 	// --------------------------------------------------------------------------
 	// For each region on binary image, find ellipse with similar second moments
 	std::vector<std::vector<cv::Point> > contours;
 	cv::Mat bimage = image >= 70;
 	std::vector<cv::RotatedRect> found;	
-	std::vector<cv::Mat> ROI;
+	//std::vector<cv::Mat> ROI;
+	std::vector<cv::Rect> ROILocation;	// contains locations of found ROIs
 
 	findContours(bimage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 	for (size_t i = 0; i < contours.size(); ++i) {
@@ -75,6 +76,10 @@ std::vector<cv::Mat> processImage(cv::Mat &image, cv::Mat &cimage) {
 				foundRow2 = row1;
 			}
 
+			if (foundCol1 < 0)
+				foundCol1 = 0;
+			if (foundCol2 >= cimage.cols)
+				foundCol2 = cimage.cols - 1;
 			foundWidth = foundCol2 - foundCol1;
 			foundHeight = static_cast<int>(1.5*foundWidth);
 			foundRow1 -= static_cast<int>(foundHeight/2);
@@ -82,8 +87,9 @@ std::vector<cv::Mat> processImage(cv::Mat &image, cv::Mat &cimage) {
 				foundRow1 = 0;
 			if (foundHeight + foundRow1 > cimage.rows)
 				foundHeight = cimage.rows - foundRow1;
-			cv::Mat myROI(cimage, cv::Rect(foundCol1, foundRow1, foundWidth, foundHeight));
-			ROI.push_back(myROI);
+			//cv::Mat myROI(cimage, cv::Rect(foundCol1, foundRow1, foundWidth, foundHeight));
+			//ROI.push_back(myROI);
+			ROILocation.push_back(cv::Rect(foundCol1, foundRow1, foundWidth, foundHeight));
 
 			// asdf
 			/*drawContours(cimage, contours, (int)i, cv::Scalar::all(255), 1, 8);
@@ -114,5 +120,5 @@ std::vector<cv::Mat> processImage(cv::Mat &image, cv::Mat &cimage) {
 		}
 	}
 
-	return ROI;
+	return ROILocation;
 }
