@@ -21,23 +21,5 @@ cv::Mat RedColorSegmentation(const cv::Mat &image) {
 		}
 	}
 
-	// -----------------------------------------------------------------------
-	// print image
-	/*double min, max;
-	cv::minMaxIdx(redComponent, &min, &max);
-	cv::Mat adjMap;
-	// expand your range to 0..255. Similar to histEq();
-	redComponent.convertTo(adjMap, CV_8UC1, 255 / (max - min), -min);
-
-	// this is great. It converts your grayscale image into a tone-mapped one, 
-	// much more pleasing for the eye
-	// function is found in contrib module, so include contrib.hpp 
-	// and link accordingly
-	cv::Mat falseColorsMap;
-	applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_JET);
-
-	cv::imshow("Out", falseColorsMap);
-	cv::waitKey(0);
-	*/
 	return redComponent;
 }

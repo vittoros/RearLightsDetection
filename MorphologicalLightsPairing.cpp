@@ -81,7 +81,7 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat &image, cv::Mat &cimage
 			if (foundCol2 >= cimage.cols)
 				foundCol2 = cimage.cols - 1;
 			foundWidth = foundCol2 - foundCol1;
-			foundHeight = static_cast<int>(1.5*foundWidth);
+			foundHeight = foundWidth;
 			foundRow1 -= static_cast<int>(foundHeight/2);
 			if (foundRow1 < 0)
 				foundRow1 = 0;

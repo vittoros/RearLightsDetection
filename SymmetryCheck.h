@@ -5,10 +5,10 @@
 #include "opencv2/imgproc/imgproc.hpp"	// cvtColor()
 
 #define SSIM_SIZE 8
-#define SSIM_STEP 3
+#define SSIM_STEP 8
 
 // image <- whole image
 // ROI <- ROI location found from previous steps
-void SymmetryCheck(const cv::Mat &image, cv::Rect &ROI);
+std::pair<double, double> SymmetryCheck(const cv::Mat &image, cv::Rect &ROI);
 
 #endif // !SYMMETRYCHECK_H

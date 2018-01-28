@@ -30,6 +30,28 @@ void HorizontalEdgeBoundaries(const cv::Mat &image, cv::Rect &ROI) {
 			last = i;
 	}
 
+	if (first == last) {
+		maxValue = static_cast<int>((2.0 * maxValue )/ 3.0);
+
+		if (first > rows / 2) {
+			for (int i = 0; i < rows; ++i) {
+				if (horizontalProjection[i] >= maxValue) {
+					first = i;
+					break;
+				}
+			}
+		}
+		else {
+			for (int i = rows - 1; i >= 0; --i) {
+				if (horizontalProjection[i] >= maxValue) {
+					last = i;
+					break;
+				}
+			}
+		}
+	}
+
+
 	// Update ROI with up and lower bounds to complete Hypothesis Generation step
 	//ROI = cv::Rect(0, first, cols, last-first);
 	ROI.y += first;
