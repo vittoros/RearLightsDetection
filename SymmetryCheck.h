@@ -9,6 +9,6 @@
 
 // image <- whole image
 // ROI <- ROI location found from previous steps
-std::pair<double, double> SymmetryCheck(const cv::Mat &image, cv::Rect &ROI);
+std::pair<double, double> SymmetryCheck(const cv::Mat &image, const cv::Rect &ROI);
 
 #endif // !SYMMETRYCHECK_H

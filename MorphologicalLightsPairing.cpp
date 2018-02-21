@@ -1,39 +1,155 @@
 #include "MorphologicalLightsPairing.h"
 
-std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat &image, cv::Mat &cimage) {
+// binaryI -> uchar (0 or 1)
+std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimage) {
+	/*binaryI = (cv::Mat_<uchar>(8, 8) << 1, 1, 0, 1, 1, 1, 0, 1,
+	1, 1, 0, 1, 0, 1, 0, 1,
+	1, 1, 1, 1, 0, 0, 0, 1,
+	0, 0, 0, 0, 0, 0, 0, 1,
+	1, 1, 1, 1, 0, 1, 0, 1,
+	0, 0, 0, 1, 0, 1, 0, 1,
+	1, 1, 1, 1, 0, 0, 0, 1,
+	1, 1, 1, 1, 0, 1, 1, 1);
+	*/
 	// --------------------------------------------------------------------------
 	// For each region on binary image, find ellipse with similar second moments
-	std::vector<std::vector<cv::Point> > contours;
-	cv::Mat bimage = image >= 70;
-	std::vector<cv::RotatedRect> found;	
-	//std::vector<cv::Mat> ROI;
-	std::vector<cv::Rect> ROILocation;	// contains locations of found ROIs
+	std::vector<std::list<cv::Point> > contours;
+	std::vector<cv::RotatedRect> found;
+	std::vector<cv::Rect> ROILocation;
+	int rows = binaryI.rows, cols = binaryI.cols;
 
-	findContours(bimage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
-	for (size_t i = 0; i < contours.size(); ++i) {
-		size_t count = contours[i].size();
-		if (count < 6)
+	// --------------------------------------------------------------------------
+	// Connected Component Labeling
+	// Two-pass algorithm
+	int label = 1, labeltemp;
+	std::vector<std::vector<int>> equivalentLabels;
+
+	// First Pass
+	for (int i = 0; i < rows; ++i)
+	for (int j = 0; j < cols; ++j) {
+		if (binaryI.at<uchar>(i, j)) {
+			labeltemp = 0;
+			// Check left and upper neighbour
+			if (i - 1 >= 0)
+				labeltemp = binaryI.at<uchar>(i - 1, j);
+
+			if (j - 1 >= 0 && binaryI.at<uchar>(i, j - 1)) {
+				// Record equality between two labels(if exists) and keep smaller
+				if (!labeltemp)
+					labeltemp = binaryI.at<uchar>(i, j - 1);
+				else if (labeltemp > binaryI.at<uchar>(i, j - 1)) {
+					equivalentLabels[labeltemp - 1].push_back(binaryI.at<uchar>(i, j - 1));
+					labeltemp = binaryI.at<uchar>(i, j - 1);
+				}
+				else
+					equivalentLabels[binaryI.at<uchar>(i, j - 1) - 1].push_back(labeltemp);
+			}
+
+			if (labeltemp) {
+				// Assign neigbour label
+				binaryI.at<uchar>(i, j) = labeltemp;
+				contours[labeltemp - 1].push_back(cv::Point(i, j));
+			}
+			else {
+				// Create new label
+				std::list<cv::Point> myList;
+				myList.push_back(cv::Point(i, j));
+				contours.push_back(myList);
+				equivalentLabels.push_back(std::vector<int> {});
+				binaryI.at<uchar>(i, j) = label++;
+			}
+		}
+
+	}
+
+	// Second Pass
+	int loop = 1;
+	for (std::vector<std::vector<int>>::reverse_iterator i = equivalentLabels.rbegin(); i != equivalentLabels.rend(); ++i) {
+		int temp = label - loop + 1;
+		for (std::vector<int>::iterator it = i->begin(); it != i->end(); ++it) {
+			if (*it && temp > *it)
+				temp = *it;
+		}
+
+		if (temp != label - loop + 1)
+			contours[temp - 1].splice(contours[temp - 1].end(), contours[label - loop - 1]);
+
+		++loop;
+	}
+
+	// Delete
+	/*
+	int temp = 0;
+	for (std::vector<std::list<cv::Point>>::iterator i = contours.begin(); i != contours.end(); ++i) {
+		++temp;
+		for (std::list<cv::Point>::iterator it = i->begin(); it != i->end(); ++it) {
+			binaryI.at<uchar>(it->x, it->y) = temp;
+		}
+	}*/
+	// Delete
+
+
+	// --------------------------------------------------------------------------
+	// Find ellipses with simillar second memonts as the regions
+	for (size_t j = 0; j < contours.size(); ++j) {
+		int samples = contours[j].size();
+		if (samples < 10)
 			continue;
 
-		cv::Mat pointsf;
-		cv::Mat(contours[i]).convertTo(pointsf, CV_32F);
-		cv::RotatedRect box = fitEllipse(pointsf);
+		// Find Mean(X) and Mean(Y^2) for both X and Y and
+		// Sum(Xi*Yi)
+		double meanX = 0.0, meanX2 = 0.0, meanY = 0.0, meanY2 = 0.0;
+		double covXY = 0.0;
+		for (std::list<cv::Point>::iterator it = contours[j].begin(); it != contours[j].end(); ++it) {
+			meanX += it->x;
+			meanX2 += it->x * it->x;
+			meanY += it->y;
+			meanY2 += it->y * it->y;
+			covXY += it->x * it->y;
+		}
+		meanX *= 1.0 / samples;
+		meanY *= 1.0 / samples;
+		meanX2 *= 1.0 / samples;
+		meanY2 *= 1.0 / samples;
 
-		if (MAX(box.size.width, box.size.height) > MIN(box.size.width, box.size.height) * 30)
-			continue;
-		//drawContours(cimage, contours, (int)i, cv::Scalar::all(255), 1, 8);
+		// Find Variance
+		double varX = meanX2 - meanX * meanX;
+		double varY = meanY2 - meanY * meanY;
 
-		//ellipse(cimage, box, cv::Scalar(0, 0, 255), 1, CV_AA);
-		//ellipse(cimage, box.center, box.size*0.5f, box.angle, 0, 360, cv::Scalar(0, 255, 255), 1, CV_AA);
+		// Find Covariance of X and Y
+		covXY *= 1.0 / (samples);
+		covXY -= meanX * meanY;
 
-		// YOYOYO
-		found.push_back(box);
-		//int font = cv::FONT_HERSHEY_SIMPLEX;
-		//cv::putText(cimage, std::to_string(int(box.angle)), box.center, font, 1, (255, 255, 255), 2);
+		// Construct Covariance Matrix
+		cv::Mat covarianceMatrix = (cv::Mat_<double>(2, 2) << varX, covXY, covXY, varY);
+
+		// Calculate EigenVectors and EigenValues of Covariance Matrix
+		cv::Mat eigenValues, eigenVectors;
+		cv::eigen(covarianceMatrix, eigenValues, eigenVectors);
+
+		// Find ellipse representing the Covariance Matrix (== found region)
+		int x = static_cast<int>(meanX), y = static_cast<int>(meanY);
+		int semiMajorAxis = static_cast<int>(sqrt(eigenValues.at<double>(0, 0))), semiMinorAxis = static_cast<int>(sqrt(eigenValues.at<double>(1, 0)));
+		semiMajorAxis *= 2.14593, semiMinorAxis *= 2.14593;
+
+		// Find angle of major axis with x-axis of image
+		double angle = atan2(eigenVectors.at<double>(0, 0), eigenVectors.at<double>(0, 1));
+		if (angle < 0)
+			angle += 6.28318530718;
+
+		angle = 180 * angle / 3.14159265359;
+
+		// Draw found ellipse
+		cv::ellipse(cimage, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
+		//cv::ellipse(binaryI, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
+
+		// Save found ellipse
+		found.push_back(cv::RotatedRect(cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle));
 	}
 
 	// --------------------------------------------------------------------------
 	// Check for aligned ellipses
+	std::vector<std::vector<int>> foundPairs(found.size());
 	for (int i = 0; i < found.size(); ++i) {
 		std::vector<std::pair<float, int>> similarityVector;
 		for (int j = 0; j < found.size(); ++j) {
@@ -41,84 +157,84 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat &image, cv::Mat &cimage
 				continue;
 			cv::RotatedRect ellipse1 = found[i], ellipse2 = found[j];
 
+			// Find if pair already exists
+			std::vector<int>::iterator it;
+			for (it = foundPairs[i].begin(); it != foundPairs[i].end(); ++it)
+			if (*it == j)
+				break;
+
+			if (it != foundPairs[i].end())
+				continue;
+
+			cv::Mat img = cimage.clone();
+			cv::line(img, ellipse1.center, ellipse2.center, 0, 3);
+
 			// Find if the centers are aligned
 			double angle = atan((ellipse1.center.y - ellipse2.center.y) / (ellipse1.center.x - ellipse2.center.x));
 			angle *= 180.0 / 3.14159265358979323846;
-			if (angle <= 5 && angle >= -5 && ellipse1.size.area() / ellipse2.size.area() <= 2.5 && ellipse2.size.area() / ellipse1.size.area() <= 2.5) {
-				similarityVector.push_back(std::make_pair(abs(ellipse1.size.area() / ellipse2.size.area() - 1), j));
+			double ar1 = ellipse1.size.area(), ar2 = ellipse2.size.area();
+			if (angle <= 5 && angle >= -5 && ellipse1.size.area() / ellipse2.size.area() <= 3 && ellipse2.size.area() / ellipse1.size.area() <= 3) {
+				// Record found pair
+				foundPairs[i].push_back(j);
+				foundPairs[j].push_back(i);
+
+				int col1 = static_cast<int>(ellipse1.center.x), row1 = static_cast<int>(ellipse1.center.y);
+				int col2 = static_cast<int>(ellipse2.center.x), row2 = static_cast<int>(ellipse2.center.y);
+
+				// Define vertical boundaries of the Candidate area
+				// as the extreme points of the rear lights
+				int foundRow1, foundCol1, foundRow2, foundCol2, foundHeight, foundWidth;
+				if (col1 < col2) {
+					foundCol1 = col1 - static_cast<int>(ellipse1.size.width / 2);
+					foundRow1 = row1;
+					foundCol2 = col2 + static_cast<int>(ellipse2.size.width / 2);
+					foundRow2 = row2;
+				}
+				else {
+					foundCol1 = col2 - static_cast<int>(ellipse2.size.width / 2);
+					foundRow1 = row2;
+					foundCol2 = col1 + static_cast<int>(ellipse1.size.width / 2);
+					foundRow2 = row1;
+				}
+
+				if (foundCol1 < 0)
+					foundCol1 = 0;
+				if (foundCol2 >= cimage.cols)
+					foundCol2 = cimage.cols - 1;
+				foundWidth = foundCol2 - foundCol1;
+				//foundHeight = foundWidth;
+				foundHeight = static_cast<int>(0.5*foundWidth);
+				foundRow1 -= static_cast<int>(foundHeight / 2);
+				if (foundRow1 < 0)
+					foundRow1 = 0;
+				if (foundHeight + foundRow1 > cimage.rows)
+					foundHeight = cimage.rows - foundRow1;
+
+				ROILocation.push_back(cv::Rect(foundCol1, foundRow1, foundWidth, foundHeight));
 			}
 
-		}
-
-		// --------------------------------------------------------------------------
-		// Find best match and define vertical boundaries
-		int foundRow1, foundCol1, foundRow2, foundCol2, foundHeight, foundWidth;
-		if (similarityVector.size()) {
-			std::sort(similarityVector.begin(), similarityVector.end());
-
-			int j = similarityVector.front().second;
-			cv::RotatedRect ellipse1 = found[i], ellipse2 = found[j];
-			int col1 = static_cast<int>(ellipse1.center.x), row1 = static_cast<int>(ellipse1.center.y);
-			int col2 = static_cast<int>(ellipse2.center.x), row2 = static_cast<int>(ellipse2.center.y);
-
-			// Define vertical boundaries of the Candidate area
-			// as the extreme points of the rear lights
-			if (col1 < col2) {
-				foundCol1 = col1 - static_cast<int>(ellipse1.size.width/2);
-				foundRow1 = row1;
-				foundCol2 = col2 + static_cast<int>(ellipse2.size.width/2);
-				foundRow2 = row2;
-			}
-			else {
-				foundCol1 = col2 - static_cast<int>(ellipse2.size.width/2);
-				foundRow1 = row2;
-				foundCol2 = col1 + static_cast<int>(ellipse1.size.width/2);
-				foundRow2 = row1;
-			}
-
-			if (foundCol1 < 0)
-				foundCol1 = 0;
-			if (foundCol2 >= cimage.cols)
-				foundCol2 = cimage.cols - 1;
-			foundWidth = foundCol2 - foundCol1;
-			foundHeight = foundWidth;
-			foundRow1 -= static_cast<int>(foundHeight/2);
-			if (foundRow1 < 0)
-				foundRow1 = 0;
-			if (foundHeight + foundRow1 > cimage.rows)
-				foundHeight = cimage.rows - foundRow1;
-			//cv::Mat myROI(cimage, cv::Rect(foundCol1, foundRow1, foundWidth, foundHeight));
-			//ROI.push_back(myROI);
-			ROILocation.push_back(cv::Rect(foundCol1, foundRow1, foundWidth, foundHeight));
-
-			// asdf
-			/*drawContours(cimage, contours, (int)i, cv::Scalar::all(255), 1, 8);
-
-			ellipse(cimage, ellipse1, cv::Scalar(0, 0, 255), 1, CV_AA);
-			ellipse(cimage, ellipse1.center, ellipse1.size*0.5f, ellipse1.angle, 0, 360, cv::Scalar(0, 255, 255), -1, CV_AA);
-
-			ellipse(cimage, ellipse2, cv::Scalar(0, 0, 255), 1, CV_AA);
-			ellipse(cimage, ellipse2.center, ellipse2.size*0.5f, ellipse2.angle, 0, 360, cv::Scalar(0, 255, 255), -1, CV_AA);
-
-
-			int font = cv::FONT_HERSHEY_SIMPLEX;
-			cv::putText(cimage, std::to_string(int(i)), ellipse2.center, font, 1, (255, 255, 255), 2);
-			int thickness = 2;
-			int lineType = 8;
-			cv::line(cimage, ellipse1.center, ellipse2.center, cv::Scalar(0, 0, 0), thickness, lineType);
-			*/
-			if (i > j) {
-				found.erase(found.begin() + i);
-				found.erase(found.begin() + j);
-			}
-			else {
-				found.erase(found.begin() + j);
-				found.erase(found.begin() + i);
-			}
-			--i;
-			--j;
 		}
 	}
+
+	// -------------------------------------------------------
+	// DELTE
+	// For each region on binary image, find ellipse with similar second moments
+	/*
+	std::vector<std::vector<cv::Point> > contours1;
+	cv::Mat bimage = binaryI >= 1;
+
+	findContours(bimage, contours1, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+	for (size_t i = 0; i < contours1.size(); ++i) {
+	size_t count = contours1[i].size();
+	if (count < 6)
+	continue;
+
+	cv::Mat pointsf;
+	cv::Mat(contours1[i]).convertTo(pointsf, CV_32F);
+	cv::RotatedRect box = fitEllipse(pointsf);
+	cv::ellipse(cimage, box, cv::Scalar(0, 255, 0), 3);
+	}*/
+	// -------------------------------------------------------
 
 	return ROILocation;
 }

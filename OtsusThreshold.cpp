@@ -37,7 +37,7 @@ void OtsusThreshold(cv::Mat &image) {
 	for (int i = 0; i < rows; ++i)
 	for (int j = 0; j < cols; ++j)
 	if (image.at<uchar>(i, j) > threshold)
-		image.at<uchar>(i, j) = 255;
+		image.at<uchar>(i, j) = 1;
 	else
 		image.at<uchar>(i, j) = 0;
 }
