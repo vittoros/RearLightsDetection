@@ -2,15 +2,6 @@
 
 // binaryI -> uchar (0 or 1)
 std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimage) {
-	/*binaryI = (cv::Mat_<uchar>(8, 8) << 1, 1, 0, 1, 1, 1, 0, 1,
-	1, 1, 0, 1, 0, 1, 0, 1,
-	1, 1, 1, 1, 0, 0, 0, 1,
-	0, 0, 0, 0, 0, 0, 0, 1,
-	1, 1, 1, 1, 0, 1, 0, 1,
-	0, 0, 0, 1, 0, 1, 0, 1,
-	1, 1, 1, 1, 0, 0, 0, 1,
-	1, 1, 1, 1, 0, 1, 1, 1);
-	*/
 	// --------------------------------------------------------------------------
 	// For each region on binary image, find ellipse with similar second moments
 	std::vector<std::list<cv::Point> > contours;
@@ -41,7 +32,7 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 					equivalentLabels[labeltemp - 1].push_back(binaryI.at<uchar>(i, j - 1));
 					labeltemp = binaryI.at<uchar>(i, j - 1);
 				}
-				else
+				else if (labeltemp < binaryI.at<uchar>(i, j - 1))
 					equivalentLabels[binaryI.at<uchar>(i, j - 1) - 1].push_back(labeltemp);
 			}
 
@@ -66,13 +57,22 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 	int loop = 1;
 	for (std::vector<std::vector<int>>::reverse_iterator i = equivalentLabels.rbegin(); i != equivalentLabels.rend(); ++i) {
 		int temp = label - loop + 1;
+		// Find smallest equivalent label
 		for (std::vector<int>::iterator it = i->begin(); it != i->end(); ++it) {
 			if (*it && temp > *it)
 				temp = *it;
 		}
 
-		if (temp != label - loop + 1)
+		// Union the pixels of the equivalent labels
+		if (temp != label - loop + 1) {
 			contours[temp - 1].splice(contours[temp - 1].end(), contours[label - loop - 1]);
+
+			// Update equality between labels
+			for (std::vector<int>::iterator it = i->begin(); it != i->end(); ++it) {
+				if (*it && temp < *it)
+					equivalentLabels[*it - 1].push_back(temp);
+			}
+		}
 
 		++loop;
 	}
@@ -140,7 +140,7 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 		angle = 180 * angle / 3.14159265359;
 
 		// Draw found ellipse
-		cv::ellipse(cimage, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
+		//cv::ellipse(cimage, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
 		//cv::ellipse(binaryI, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
 
 		// Save found ellipse
@@ -215,26 +215,6 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 
 		}
 	}
-
-	// -------------------------------------------------------
-	// DELTE
-	// For each region on binary image, find ellipse with similar second moments
-	/*
-	std::vector<std::vector<cv::Point> > contours1;
-	cv::Mat bimage = binaryI >= 1;
-
-	findContours(bimage, contours1, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
-	for (size_t i = 0; i < contours1.size(); ++i) {
-	size_t count = contours1[i].size();
-	if (count < 6)
-	continue;
-
-	cv::Mat pointsf;
-	cv::Mat(contours1[i]).convertTo(pointsf, CV_32F);
-	cv::RotatedRect box = fitEllipse(pointsf);
-	cv::ellipse(cimage, box, cv::Scalar(0, 255, 0), 3);
-	}*/
-	// -------------------------------------------------------
 
 	return ROILocation;
 }
