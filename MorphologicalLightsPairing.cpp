@@ -1,6 +1,8 @@
 #include "MorphologicalLightsPairing.h"
 
 // binaryI -> uchar (0 or 1)
+// binaryI uchar => up to 255 different label (0 is background) and in first pass
+// For larger images than the ones used in this application, a different data type is needed
 std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimage) {
 	// --------------------------------------------------------------------------
 	// For each region on binary image, find ellipse with similar second moments
@@ -76,9 +78,9 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 
 		++loop;
 	}
-
-	// Delete
+	
 	/*
+	// Update/Color the binary map
 	int temp = 0;
 	for (std::vector<std::list<cv::Point>>::iterator i = contours.begin(); i != contours.end(); ++i) {
 		++temp;
@@ -86,7 +88,6 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 			binaryI.at<uchar>(it->x, it->y) = temp;
 		}
 	}*/
-	// Delete
 
 
 	// --------------------------------------------------------------------------
@@ -141,7 +142,6 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 
 		// Draw found ellipse
 		//cv::ellipse(cimage, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
-		//cv::ellipse(binaryI, cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle, 0, 360, cv::Scalar(255, 255, 255), 2);
 
 		// Save found ellipse
 		found.push_back(cv::RotatedRect(cv::Point(y, x), cv::Size(semiMajorAxis, semiMinorAxis), angle));
@@ -151,11 +151,44 @@ std::vector<cv::Rect> MorphologicalLightsPairing(cv::Mat binaryI, cv::Mat &cimag
 	// Check for aligned ellipses
 	std::vector<std::vector<int>> foundPairs(found.size());
 	for (int i = 0; i < found.size(); ++i) {
+		cv::RotatedRect ellipse1 = found[i];
+		// --------------------------------------------
+		// For case of red vehicles or single red light
+		if (ellipse1.size.width * 2 >= rows / 4.0 && ellipse1.angle <= 15 && ellipse1.angle >= -15) {
+			int col1 = static_cast<int>(ellipse1.center.x), row1 = static_cast<int>(ellipse1.center.y);
+
+			// Define vertical boundaries of the Candidate area
+			// as the extreme points of the rear lights
+			int foundRow, foundCol1, foundCol2, foundHeight, foundWidth;
+			foundWidth = static_cast<int>(0.8*ellipse1.size.width);
+			foundCol1 = col1 - foundWidth;
+			foundCol2 = col1 + foundWidth;
+			foundRow = row1;
+
+			if (foundCol1 < 0)
+				foundCol1 = 0;
+			if (foundCol2 >= cimage.cols)
+				foundCol2 = cimage.cols - 1;
+			
+			foundWidth = foundCol2 - foundCol1;
+			//foundHeight = foundWidth;
+			foundHeight = static_cast<int>(0.5*foundWidth);
+			foundRow -= static_cast<int>(foundHeight / 2);
+			if (foundRow < 0)
+				foundRow = 0;
+			if (foundHeight + foundRow > cimage.rows)
+				foundHeight = cimage.rows - foundRow;
+
+			ROILocation.push_back(cv::Rect(foundCol1, foundRow, foundWidth, foundHeight));
+		}
+
+		// --------------------------------------------
+		// Check for aligned ellipses
 		std::vector<std::pair<float, int>> similarityVector;
 		for (int j = 0; j < found.size(); ++j) {
 			if (j == i)
 				continue;
-			cv::RotatedRect ellipse1 = found[i], ellipse2 = found[j];
+			cv::RotatedRect ellipse2 = found[j];
 
 			// Find if pair already exists
 			std::vector<int>::iterator it;

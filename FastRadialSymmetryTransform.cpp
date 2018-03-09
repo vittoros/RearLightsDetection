@@ -25,20 +25,14 @@ cv::Mat FastRadialSymmetryTransform(const cv::Mat &image, const int &mode, const
 
 
 	// Calculate gradient of image
-	cv::Mat Gx = cv::Mat::zeros(image.size(), CV_64FC1), Gy = cv::Mat::zeros(image.size(), CV_64FC1);
+	cv::Mat Gx(rows, cols, CV_64FC1), Gy(rows, cols, CV_64FC1);
+	cv::Mat edgeMaskX = (cv::Mat_<float>(3, 1) << -1, 0, 1);
+	cv::Mat edgeMaskY = (cv::Mat_<float>(1, 3) << -1, 0, 1);
 	cv::Mat GradientMagnitude(rows, cols, CV_64FC1);
 	double max = -1, temp;
-	//Sobel(image, Gx, CV_64F, 1, 0);
-	//Sobel(image, Gy, CV_64F, 0, 1);
-	for (int y = 1; y < image.rows - 1; ++y)
-	for (int x = 0; x < image.cols; ++x)
-		*((double*)Gx.data + y*Gx.cols + x) = (double)(*(image.data + (y + 1)*image.cols + x) - *(image.data + (y - 1)*image.cols + x)) / 2;
-		
-	
-	for (int y = 0; y < image.rows; ++y)
-	for (int x = 1; x < image.cols - 1; ++x)
-		*((double*)Gy.data + y*Gy.cols + x) = (double)(*(image.data + y*image.cols + x + 1) - *(image.data + y*image.cols + x - 1)) / 2;
-		
+
+	filter2D(image, Gx, CV_64F, edgeMaskX, cv::Point(-1, -1), 0, cv::BORDER_DEFAULT);
+	filter2D(image, Gy, CV_64F, edgeMaskY, cv::Point(-1, -1), 0, cv::BORDER_DEFAULT);
 	
 	for (int i = 0; i < rows; ++i)
 	for (int j = 0; j < cols; ++j) {

@@ -7,7 +7,7 @@ cv::Mat RedColorSegmentation(const cv::Mat &image) {
 
 	// Keep only positive of a* channel
 	cv::Mat redComponent(image_out.rows, image_out.cols, CV_8UC1);
-	int ch[] = { 1, 0};
+	int ch[] = {1, 0};
 	mixChannels(&image_out, 1, &redComponent, 1, ch, 1);
 
 	// Keep red subspace from red-green (positive of a* channel)

@@ -1,11 +1,9 @@
 #include "SymmetryCheck.h"
-//#include <opencv2/highgui/highgui.hpp>
 
 // image <- whole image
 // ROI <- ROI location found from previous steps
 std::pair<double, double> SymmetryCheck(const cv::Mat &image, const cv::Rect &ROI) {
 	cv::Mat myROI(image, ROI);
-	//cv::Mat myROI = cv::imread("cars_joe/01.jpg");
 	cvtColor(myROI, myROI, CV_BGR2GRAY);
 
 	// Calculate Mean Absolute value 
@@ -23,6 +21,7 @@ std::pair<double, double> SymmetryCheck(const cv::Mat &image, const cv::Rect &RO
 	double c1 = k1*L*k1*L, c2 = k2*L*k2*L;
 	for (int i = 0; i < rows - SSIM_SIZE; i += SSIM_STEP)
 	for (int j1 = 0, j2 = cols - 1; j1 + SSIM_SIZE <= j2 - SSIM_SIZE; j1 += SSIM_STEP, j2 -= SSIM_STEP) {
+		// Apply the formula on the two subwindows
 		cv::Rect rect1(j1,i, SSIM_SIZE, SSIM_SIZE), rect2(j2-SSIM_SIZE+1, i, SSIM_SIZE, SSIM_SIZE);
 		cv::Mat ROI1(myROI, rect1), ROI2(myROI, rect2);
 		cv::Scalar mean, stdv;
