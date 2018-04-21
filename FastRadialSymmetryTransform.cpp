@@ -26,7 +26,7 @@ cv::Mat FastRadialSymmetryTransform(const cv::Mat &image, const int &mode, const
 
 	// Calculate gradient of image
 	cv::Mat Gx(rows, cols, CV_64FC1), Gy(rows, cols, CV_64FC1);
-	cv::Mat edgeMaskX = (cv::Mat_<float>(3, 1) << -1, 0, 1);
+	cv::Mat edgeMaskX = (cv::Mat_<float>(3, 1) << 1, 1, 1);
 	cv::Mat edgeMaskY = (cv::Mat_<float>(1, 3) << -1, 0, 1);
 	cv::Mat GradientMagnitude(rows, cols, CV_64FC1);
 	double max = -1, temp;
